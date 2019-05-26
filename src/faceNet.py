@@ -101,7 +101,6 @@ class faceNet(nn.Module):
         self.feature = feature
 
         self.conv1_1 = nn.Conv2d(3,64,3,2,1) #=>B*64*56*48
-        self.conv1_1 = nn.BathNorm(self.conv1_1)
         self.relu1_1 = nn.PReLU(64)
         self.conv1_2 = nn.Conv2d(64,64,3,1,1)
         self.relu1_2 = nn.PReLU(64)
