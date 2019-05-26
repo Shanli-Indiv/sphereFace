@@ -7,24 +7,41 @@ import numpy as np
 
 
 class CustomLinear(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=10,
-                               kernel_size=5,
-                               stride=1)
-        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-        self.conv2_bn = nn.BatchNorm2d(20)
-        self.dense1 = nn.Linear(in_features=320, out_features=50)
-        self.dense1_bn = nn.BatchNorm1d(50)
-        self.dense2 = nn.Linear(50, 10)
+    def __init__(self, in_features, out_features, m = 4 ):
+        super(CustomLinear, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.weight = Parameter(torch.Tensor(in_features,out_features))
+        self.weight.data.uniform_(-1, 1).renorm_(2,1,1e-5).mul_(1e5)
+        self.m = m
+        self.mlambda = [
+            lambda x: x**0,
+            lambda x: x**1,
+            lambda x: 2*x**2-1,
+            lambda x: 4*x**3-3*x,
+            lambda x: 8*x**4-8*x**2+1,
+            lambda x: 16*x**5-20*x**3+5*x
+        ]
 
-    def forward(self, x):
-        x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        x = F.relu(F.max_pool2d(self.conv2_bn(self.conv2(x)), 2))
-        x = x.view(-1, 320) #reshape
-        x = F.relu(self.dense1_bn(self.dense1(x)))
-        x = F.relu(self.dense2(x))
-        return F.log_softmax(x)
+    def forward(self, input):
+        x = input   # size=(B,F)    F is feature len
+        w = self.weight # size=(F,Classnum) F=in_features Classnum=out_features
+
+        ww = w.renorm(2,1,1e-5).mul(1e5)
+        xlen = x.pow(2).sum(1).pow(0.5) # size=B
+        wlen = ww.pow(2).sum(0).pow(0.5) # size=Classnum
+
+        cos_theta = x.mm(ww) # size=(B,Classnum)
+        cos_theta = cos_theta / torch.clamp(xlen.view(-1,1) * wlen.view(1,-1), min=1e-8)
+        cos_theta = cos_theta.clamp(-1,1)
+
+        # IMPLEMENT phi_theta
+
+        cos_theta = cos_theta * xlen.view(-1,1)
+        phi_theta = phi_theta * xlen.view(-1,1)
+
+        output = (cos_theta,phi_theta)
+        return output
 
 
 class CustomLoss(nn.Module):
@@ -43,25 +60,6 @@ class CustomLoss(nn.Module):
         target = target.view(-1,1) #size=(B,1)
 
         # IMPLEMENT loss
-        index = cos_theta.data * 0.0 #size=(B,Classnum)
-        index.scatter_(1,target.data.view(-1,1),1)
-        index = index.byte()
-        index = Variable(index)
-
-        self.lamb = max(self.LambdaMin,self.LambdaMax/(1+0.1*self.it ))
-        output = cos_theta * 1.0 #size=(B,Classnum)
-        output[index] -= cos_theta[index]*(1.0+0)/(1+self.lamb)
-        output[index] += phi_theta[index]*(1.0+0)/(1+self.lamb)
-
-        logpt = F.log_softmax(output)
-        logpt = logpt.gather(1,target)
-        logpt = logpt.view(-1)
-        pt = Variable(logpt.data.exp())
-
-        loss = -1 * (1-pt)**0 * logpt
-        loss = loss.mean()
-
-
 
         _, predictedLabel = torch.max(cos_theta.data, 1)
         predictedLabel = predictedLabel.view(-1, 1)
@@ -102,6 +100,8 @@ class faceNet(nn.Module):
         self.relu3_2 = nn.PReLU(256)
         self.conv3_3 = nn.Conv2d(256,256,3,1,1)
         self.relu3_3 = nn.PReLU(256)
+
+        self.conv3_3 = nn.batchNorm2d(20)
 
         self.conv3_4 = nn.Conv2d(256,256,3,1,1) #=>B*256*14*12
         self.relu3_4 = nn.PReLU(256)
