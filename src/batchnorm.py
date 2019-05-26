@@ -7,30 +7,24 @@ import numpy as np
 
 
 class CustomLinear(nn.Module):
-    def __init__(self, in_features, out_features, m = 0.35):
-        super(CustomLinear, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.weight = Parameter(torch.Tensor(in_features,out_features) )
-        self.weight.data.uniform_(-1, 1).renorm_(2,1,1e-5).mul_(1e5)
-        self.m = m
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=10,
+                               kernel_size=5,
+                               stride=1)
+        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+        self.conv2_bn = nn.BatchNorm2d(20)
+        self.dense1 = nn.Linear(in_features=320, out_features=50)
+        self.dense1_bn = nn.BatchNorm1d(50)
+        self.dense2 = nn.Linear(50, 10)
 
-    def forward(self, input):
-        x = input   # size=(B,F)    F is feature len
-        w = self.weight # size=(F,Classnum) F=in_features Classnum=out_features
-
-        ww = w.renorm(2,1,1e-5).mul(1e5)
-        xlen = x.pow(2).sum(1).pow(0.5) # size=B
-        wlen = ww.pow(2).sum(0).pow(0.5) # size=Classnum
-
-        cos_theta = x.mm(ww) # size=(B,Classnum)
-        cos_theta = cos_theta / torch.clamp(xlen.view(-1,1) * wlen.view(1,-1), min=1e-8 )
-        cos_theta = cos_theta.clamp(-1,1)
-
-        # IMPLEMENT phi_theta
-
-        output = (cos_theta,phi_theta)
-        return output
+    def forward(self, x):
+        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = F.relu(F.max_pool2d(self.conv2_bn(self.conv2(x)), 2))
+        x = x.view(-1, 320) #reshape
+        x = F.relu(self.dense1_bn(self.dense1(x)))
+        x = F.relu(self.dense2(x))
+        return F.log_softmax(x)
 
 
 class CustomLoss(nn.Module):
