@@ -101,7 +101,7 @@ class faceNet(nn.Module):
         self.conv3_3 = nn.Conv2d(256,256,3,1,1)
         self.relu3_3 = nn.PReLU(256)
 
-        self.conv3_3 = nn.BatchNorm2d(20)
+        self.conv3_3 = nn.BatchNorm2d(256)
 
         self.conv3_4 = nn.Conv2d(256,256,3,1,1) #=>B*256*14*12
         self.relu3_4 = nn.PReLU(256)
