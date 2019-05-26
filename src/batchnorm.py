@@ -76,6 +76,7 @@ class faceNet(nn.Module):
         self.feature = feature
 
         self.conv1_1 = nn.Conv2d(3,64,3,2,1) #=>B*64*56*48
+        self.conv1_1 = nn.BathNorm(self.conv1_1)
         self.relu1_1 = nn.PReLU(64)
         self.conv1_2 = nn.Conv2d(64,64,3,1,1)
         self.relu1_2 = nn.PReLU(64)
@@ -100,8 +101,6 @@ class faceNet(nn.Module):
         self.relu3_2 = nn.PReLU(256)
         self.conv3_3 = nn.Conv2d(256,256,3,1,1)
         self.relu3_3 = nn.PReLU(256)
-
-        self.conv3_3 = nn.BatchNorm2d(3)
 
         self.conv3_4 = nn.Conv2d(256,256,3,1,1) #=>B*256*14*12
         self.relu3_4 = nn.PReLU(256)
